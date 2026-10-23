@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Selection Sort — Sorting Visualizer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page" id="app"></div>
+
+  <script src="engine.js"></script>
+
+  <!-- The selection sort itself. It runs once and RECORDS every step. -->
+  <script id="algorithm">
+    const SELECTION_CODE = [
+      "def selection_sort(arr):",
+      "    n = len(arr)",
+      "    for i in range(n - 1):",
+      "        min_index = i",
+      "        for j in range(i + 1, n):",
+      "            if arr[j] < arr[min_index]:",
+      "                min_index = j",
+      "        if min_index != i:",
+      "            arr[i], arr[min_index] = arr[min_index], arr[i]",
+      "    return arr",
+    ];
+
+    function recordSelectionSort(array) {
+      const r = new Recorder(array);
+      const a = r.arr;           // the array being sorted (changes as we swap)
+      const n = a.length;
+      const sorted = [];         // positions that are finished (green)
+
+      // Labels under the boxes: where the current smallest is, and where j is
+      function labels(min, j) {
+        if (j === undefined) return [{ index: min, text: "▲ smallest" }];
+        if (j === min) return [{ index: min, text: "▲ smallest / j" }];
+        return [{ index: min, text: "▲ smallest" }, { index: j, text: "▲ j" }];
+      }
+
+      r.step({
+        codeLine: 1,
+        message: `Here are our ${n} numbers. Selection sort finds the smallest number and puts it first, then the next smallest, and so on.`,
+        highlight: { boundary: 0 },
+        history: { label: "Start", array: a.slice(), sorted: [], note: "Before sorting" },
+      });
+      r.step({
+        codeLine: 2,
+        message: `n = len(arr) means "count the numbers". We have n = ${n}.`,
+        highlight: { boundary: 0 },
+      });
+
+      for (let i = 0; i < n - 1; i++) {
+        r.pass = i + 1;
+        r.step({
+          codeLine: 3,
+          message: `Pass ${i + 1}: find the smallest number in the unsorted part (index ${i} to ${n - 1}) and put it at index ${i}.`,
+          highlight: { sorted: [...sorted], boundary: i },
+        });
+
+        let min = i;
+        r.step({
+          codeLine: 4,
+          message: `To start, we guess that the first unsorted number, ${a[i]} (index ${i}), is the smallest.`,
+          highlight: { sorted: [...sorted], boundary: i, outlined: [min] },
+          markers: labels(min),
+        });
+
+        for (let j = i + 1; j < n; j++) {
+          r.step({
+            codeLine: 5,
+            message: `j = ${j}: now we look at the number at index ${j}, which is ${a[j]}.`,
+            highlight: { sorted: [...sorted], boundary: i, outlined: [min] },
+            markers: labels(min, j),
+          });
+
+          r.compare();
+          const smaller = a[j] < a[min];
+          let message;
+          if (smaller) {
+            message = `Is ${a[j]} smaller than ${a[min]}? Yes!`;
+          } else if (a[j] === a[min]) {
+            message = `Is ${a[j]} smaller than ${a[min]}? No, they are equal. We keep the smallest we already found.`;
+          } else {
+            message = `Is ${a[j]} smaller than ${a[min]}? No. The smallest is still ${a[min]}.`;
+          }
+          r.step({
+            codeLine: 6,
+            message,
+            highlight: { comparing: [j, min], sorted: [...sorted], boundary: i, outlined: [min] },
+            markers: labels(min, j),
+          });
+
+          if (smaller) {
+            min = j;
+            r.step({
+              codeLine: 7,
+              message: `${a[j]} is the new smallest! The "smallest" label moves to index ${j}.`,
+              highlight: { sorted: [...sorted], boundary: i, outlined: [min] },
+              markers: labels(min, j),
+            });
+          }
+        }
+
+        const swapped = min !== i;
+        r.step({
+          codeLine: 8,
+          message: swapped
+            ? `We checked every unsorted number. The smallest is ${a[min]} at index ${min}. It is not at index ${i} yet, so we must swap.`
+            : `We checked every unsorted number. The smallest is ${a[min]}, and it is already at index ${i}. No swap needed!`,
+          highlight: { sorted: [...sorted], boundary: i, outlined: [min] },
+          markers: labels(min),
+        });
+
+        let note;
+        if (swapped) {
+          const big = a[i], small = a[min];
+          r.swap(i, min);
+          r.step({
+            codeLine: 9,
+            message: `Swap! ${small} moves to index ${i}, and ${big} moves to index ${min}.`,
+            highlight: { swapping: [i, min], sorted: [...sorted], boundary: i },
+          });
+          note = `Smallest was ${small}: swapped it with ${big}`;
+        } else {
+          note = `Smallest was ${a[i]}: already in place, no swap`;
+        }
+
+        sorted.push(i);
+        const left = n - 1 - i;
+        r.step({
+          codeLine: swapped ? 9 : 8,
+          message: `End of pass ${i + 1}: ${a[i]} is now in its final place (green ✓). ` +
+            (left > 1
+              ? `The unsorted part shrinks, so the next pass checks one less number (${left} left).`
+              : `Only one number is left.`),
+          highlight: { sorted: [...sorted], boundary: i + 1 },
+          history: {
+            label: `Pass ${i + 1}`,
+            array: a.slice(),
+            sorted: [...sorted],
+            changed: swapped ? [i, min] : [],
+            note,
+          },
+        });
+      }
+
+      sorted.push(n - 1);
+      r.step({
+        codeLine: 10,
+        message: `The last number, ${a[n - 1]}, must be the biggest, so it is already in place. All done: the array is sorted!`,
+        highlight: { sorted: [...sorted], boundary: n },
+      });
+
+      return r.steps;
+    }
+  </script>
+
+  <script>
+    SortPage.init({
+      title: "Selection Sort",
+      bigIdea: `
+        <p>Imagine lining up your class from shortest to tallest. You look along the whole line, find the
+        <b>shortest</b> person, and move them to the front.</p>
+        <p>Then you look at everyone <b>else</b>, find the next shortest, and move them to second place.
+        Each pass <b>selects</b> one number and puts it in its final spot. That is why it's called selection sort.</p>`,
+      code: SELECTION_CODE,
+      record: recordSelectionSort,
+      defaultArray: [64, 25, 12, 22, 11],
+      passLabel: "Pass",
+      swapLabel: "Swaps",
+      extraLegend: [
+        { symbol: "▲", text: "\"smallest\" = smallest number found so far (dashed outline)" },
+        { symbol: "j", text: "j = the number we are looking at now" },
+        { symbol: "┆", text: "Dashed line = sorted part | unsorted part" },
+      ],
+    });
+  </script>
+</body>
+</html>

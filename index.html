@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sorting Visualizer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page">
+    <header class="top">
+      <h1>Sorting Visualizer 📊</h1>
+    </header>
+
+    <section class="card big-idea">
+      <h2>💡 What is sorting?</h2>
+      <p><b>Sorting</b> means putting things in order, like lining up from shortest to tallest.</p>
+      <p>A computer can only look at a few numbers at a time, so it needs a step-by-step plan.
+      A step-by-step plan like this is called an <b>algorithm</b>. Here are 5 different ways to sort. Pick one to watch it work, step by step.</p>
+    </section>
+
+    <section class="card">
+      <h2>Choose a sorting algorithm</h2>
+      <div class="algo-buttons" id="algo-buttons"></div>
+    </section>
+
+    <section class="card">
+      <h2>How do they compare?</h2>
+      <p class="hint">"n" means how many numbers we are sorting.
+        "About n × n steps" means: if you <b>double</b> the numbers, the work goes up about <b>4 times</b>.</p>
+      <table class="compare">
+        <tr>
+          <th>Algorithm</th>
+          <th>The big idea in one line</th>
+          <th>How much work? (for big lists)</th>
+          <th>Fast when the list is already sorted?</th>
+        </tr>
+        <tr>
+          <td><b>Bubble</b></td>
+          <td>Compare neighbors and swap if they are in the wrong order. Big numbers "bubble" to the end.</td>
+          <td>About n × n steps (slow)</td>
+          <td>Yes, if it stops early when no swaps happen</td>
+        </tr>
+        <tr>
+          <td><b>Selection</b></td>
+          <td>Find the smallest number, put it first. Repeat with the rest.</td>
+          <td>About n × n steps (slow)</td>
+          <td>No, it always checks everything</td>
+        </tr>
+        <tr>
+          <td><b>Insertion</b></td>
+          <td>Pick up the next number and slide it into the right spot, like sorting cards in your hand.</td>
+          <td>About n × n steps (slow)</td>
+          <td>Yes, very fast</td>
+        </tr>
+        <tr>
+          <td><b>Merge</b></td>
+          <td>Split the list in half again and again, then merge the small sorted pieces back together.</td>
+          <td>About n × log n steps (fast)</td>
+          <td>No, but it is always fast</td>
+        </tr>
+        <tr>
+          <td><b>Quick</b></td>
+          <td>Pick a "pivot" number. Put smaller numbers on its left and bigger on its right. Repeat on each side.</td>
+          <td>Usually n × log n (fast), but n × n in the worst case</td>
+          <td>No. With the last number as pivot, a sorted list is its worst case!</td>
+        </tr>
+      </table>
+    </section>
+  </div>
+
+  <script>
+    // Set "ready: true" when each page is finished.
+    const ALGORITHMS = [
+      { name: "Bubble sort",    file: "bubble.html",    desc: "Swap neighbors until done",      ready: false },
+      { name: "Selection sort", file: "selection.html", desc: "Pick the smallest each time",    ready: true },
+      { name: "Insertion sort", file: "insertion.html", desc: "Like sorting playing cards",     ready: true },
+      { name: "Merge sort",     file: "merge.html",     desc: "Split in half, then merge",      ready: true },
+      { name: "Quick sort",     file: "quick.html",     desc: "Pick a pivot, split around it",  ready: true },
+    ];
+
+    document.getElementById("algo-buttons").innerHTML = ALGORITHMS.map((a) =>
+      a.ready
+        ? `<a class="algo-btn" href="${a.file}"><div class="name">${a.name} →</div><div class="desc">${a.desc}</div></a>`
+        : `<div class="algo-btn soon"><div class="name">${a.name}</div><div class="desc">${a.desc}<br><i>Coming soon</i></div></div>`
+    ).join("");
+  </script>
+</body>
+</html>

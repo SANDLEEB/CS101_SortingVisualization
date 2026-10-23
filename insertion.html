@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Insertion Sort — Sorting Visualizer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page" id="app"></div>
+
+  <script src="engine.js"></script>
+
+  <!-- The insertion sort itself. It runs once and RECORDS every step. -->
+  <script id="algorithm">
+    const INSERTION_CODE = [
+      "def insertion_sort(arr):",
+      "    for i in range(1, len(arr)):",
+      "        key = arr[i]",
+      "        j = i - 1",
+      "        while j >= 0 and arr[j] > key:",
+      "            arr[j + 1] = arr[j]",
+      "            j -= 1",
+      "        arr[j + 1] = key",
+      "    return arr",
+    ];
+
+    function recordInsertionSort(array) {
+      const r = new Recorder(array);
+      const a = r.arr;           // what the students see (the key floats above its gap)
+      const n = a.length;
+
+      // Labels under the boxes: where the key (and the gap) is, and where j is
+      function labels(gap, j) {
+        const list = [{ index: gap, text: "▲ key" }];
+        if (j >= 0) list.push({ index: j, text: "▲ j" });
+        return list;
+      }
+
+      r.step({
+        codeLine: 1,
+        message: `Here are our ${n} numbers. Insertion sort works like sorting playing cards in your hand: take the next card and slide it into the right spot.`,
+        highlight: { boundary: 1 },
+        history: { label: "Start", array: a.slice(), note: "Before sorting" },
+      });
+      r.step({
+        codeLine: 1,
+        message: `A single card is always "sorted", so the first number, ${a[0]}, is our sorted part to begin with.`,
+        highlight: { boundary: 1 },
+      });
+
+      for (let i = 1; i < n; i++) {
+        r.pass = i;
+        const key = a[i];
+        r.step({
+          codeLine: 2,
+          message: `Pass ${i}: the next card to insert is at index ${i}. Everything left of the dashed line is already in order.`,
+          highlight: { boundary: i },
+          markers: [{ index: i, text: "▲ i" }],
+        });
+        r.step({
+          codeLine: 3,
+          message: `Pick up ${key} and hold it, like a card in your hand (✋). Its old spot is now a gap.`,
+          highlight: { boundary: i + 1, key: i },
+          markers: labels(i, -1),
+        });
+
+        let gap = i;      // where the key is hovering
+        let j = i - 1;
+        r.step({
+          codeLine: 4,
+          message: `j starts just left of the gap, at index ${j}. We will compare the key with the numbers to its left.`,
+          highlight: { boundary: i + 1, key: gap },
+          markers: labels(gap, j),
+        });
+
+        let shifts = 0;
+        while (true) {
+          if (j < 0) {
+            r.step({
+              codeLine: 5,
+              message: `j is now -1: there are no more numbers to the left. Stop. The key goes at the very front.`,
+              highlight: { boundary: i + 1, key: gap },
+              markers: labels(gap, j),
+            });
+            break;
+          }
+          r.compare();
+          if (a[j] > key) {
+            r.step({
+              codeLine: 5,
+              message: `Is ${a[j]} bigger than the key, ${key}? Yes. So ${a[j]} must move right to make room.`,
+              highlight: { boundary: i + 1, key: gap, comparing: [j] },
+              markers: labels(gap, j),
+            });
+            const moved = a[j];
+            r.swap(j, gap);   // the bigger number slides right into the gap; the key floats left
+            gap = j;
+            shifts++;
+            r.step({
+              codeLine: 6,
+              message: `${moved} slides one place to the right (into the gap). The gap moves left to index ${gap}.`,
+              highlight: { boundary: i + 1, key: gap, swapping: [gap + 1] },
+              markers: labels(gap, -1),
+            });
+            j--;
+            r.step({
+              codeLine: 7,
+              message: j >= 0
+                ? `j moves one step left, to index ${j}. Next we compare the key with ${a[j]}.`
+                : `j moves one step left, to -1. That is past the start of the list.`,
+              highlight: { boundary: i + 1, key: gap },
+              markers: labels(gap, j),
+            });
+          } else {
+            r.step({
+              codeLine: 5,
+              message: a[j] === key
+                ? `Is ${a[j]} bigger than the key, ${key}? No, they are equal. So we stop here (equal numbers keep their order).`
+                : `Is ${a[j]} bigger than the key, ${key}? No. So we stop: the key belongs right after ${a[j]}.`,
+              highlight: { boundary: i + 1, key: gap, comparing: [j] },
+              markers: labels(gap, j),
+            });
+            break;
+          }
+        }
+
+        // Drop the key into the gap. It only counts as a move if it landed somewhere new.
+        const placedAt = gap;
+        if (placedAt !== i) r.swaps++;
+        r.step({
+          codeLine: 8,
+          message: placedAt !== i
+            ? `Put the key, ${key}, down in the gap at index ${placedAt}.`
+            : `No numbers moved, so ${key} goes right back where it was (index ${i}). It was already in the right place.`,
+          highlight: { boundary: i + 1, swapping: placedAt !== i ? [placedAt] : [] },
+          markers: [{ index: placedAt, text: "▼ placed" }],
+        });
+
+        const changed = [];
+        for (let k = placedAt; k <= i && placedAt !== i; k++) changed.push(k);
+        r.step({
+          codeLine: 8,
+          message: `End of pass ${i}: the first ${i + 1} numbers are now in order. ` +
+            (i < n - 1 ? `Next, we insert the number at index ${i + 1}.` : `That was the last card!`),
+          highlight: { boundary: i + 1 },
+          history: {
+            label: `Pass ${i}`,
+            array: a.slice(),
+            changed,
+            note: shifts === 0
+              ? `Inserted ${key}: already in place, nothing moved`
+              : `Inserted ${key}: ${shifts} bigger number${shifts > 1 ? "s" : ""} shifted right`,
+          },
+        });
+      }
+
+      r.step({
+        codeLine: 9,
+        message: `Every card has been inserted. All done: the array is sorted!`,
+        highlight: { sorted: a.map((_, k) => k), boundary: n },
+      });
+
+      return r.steps;
+    }
+  </script>
+
+  <script>
+    SortPage.init({
+      title: "Insertion Sort",
+      bigIdea: `
+        <p>Think of sorting playing cards in your hand. You pick up one new card at a time and
+        slide it to the left until it sits in the right spot.</p>
+        <p>The cards on the left are always in order. Bigger cards <b>shift right</b> to make room for the new one.
+        We count <b>moves</b> (not swaps), because numbers slide over instead of trading places.</p>`,
+      code: INSERTION_CODE,
+      record: recordInsertionSort,
+      defaultArray: [12, 11, 13, 5, 6],
+      passLabel: "Pass",
+      swapLabel: "Moves",
+      boundaryLabels: ["← sorted so far", "not yet →"],
+      extraLegend: [
+        { symbol: "✋", text: "Lifted bar = the key (the card we are holding)" },
+        { symbol: "j", text: "j = the number we compare the key with" },
+        { symbol: "┆", text: "Dashed line = sorted so far | not yet" },
+      ],
+    });
+  </script>
+</body>
+</html>

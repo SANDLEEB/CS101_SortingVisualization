@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Merge Sort — Sorting Visualizer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page" id="app"></div>
+
+  <script src="engine.js"></script>
+
+  <!-- The merge sort itself. It runs once and RECORDS every step. -->
+  <script id="algorithm">
+    const MERGE_CODE = [
+      "def merge_sort(arr):",
+      "    if len(arr) <= 1:",
+      "        return arr",
+      "    mid = len(arr) // 2",
+      "    left = merge_sort(arr[:mid])",
+      "    right = merge_sort(arr[mid:])",
+      "    return merge(left, right)",
+      "",
+      "def merge(left, right):",
+      "    result = []",
+      "    i = 0",
+      "    j = 0",
+      "    while i < len(left) and j < len(right):",
+      "        if left[i] <= right[j]:",
+      "            result.append(left[i])",
+      "            i += 1",
+      "        else:",
+      "            result.append(right[j])",
+      "            j += 1",
+      "    result.extend(left[i:])",
+      "    result.extend(right[j:])",
+      "    return result",
+    ];
+
+    function recordMergeSort(array) {
+      const r = new Recorder(array);
+      const a = r.arr;
+      const n = a.length;
+      const fmt = (list) => "[" + list.join(", ") + "]";
+
+      // The whole split tree is planned up front (all hidden), so its layout never jumps around.
+      // Each node is one piece of the list: index lo to hi, at a given level.
+      const nodes = [];
+      function plan(lo, hi, depth) {
+        const node = { lo, hi, depth, values: [], status: "hidden" };
+        nodes.push(node);
+        if (hi > lo) {
+          const mid = Math.floor((hi - lo + 1) / 2);
+          node.left = plan(lo, lo + mid - 1, depth + 1);
+          node.right = plan(lo + mid, hi, depth + 1);
+        }
+        return node;
+      }
+      const root = plan(0, n - 1, 0);
+
+      let ws = null;        // the merge workspace (left half, right half, result row)
+      let mergeCount = 0;
+
+      // Save a step, with a copy of the tree and workspace as they look right now
+      function save(step) {
+        r.step({
+          ...step,
+          extra: {
+            tree: nodes.map((nd) => ({ lo: nd.lo, hi: nd.hi, depth: nd.depth, values: nd.values.slice(), status: nd.status })),
+            ws: ws && { ...ws, left: ws.left.slice(), right: ws.right.slice(), result: ws.result.slice() },
+          },
+        });
+      }
+
+      r.phase = "Splitting";
+      save({
+        codeLine: 1,
+        message: `Here are our ${n} numbers. Merge sort has two phases: first SPLIT the list in half again and again, then MERGE the small pieces back together in order.`,
+        history: { label: "Start", array: a.slice(), note: "Before sorting" },
+      });
+
+      function mergeSort(node) {
+        const { lo, hi, depth } = node;
+        const len = hi - lo + 1;
+        const piece = a.slice(lo, hi + 1);
+        const range = { range: [lo, hi] };
+        r.pass = depth;
+        r.phase = "Splitting";
+        node.values = piece;
+        node.status = "active";
+
+        save({
+          codeLine: 1,
+          message: depth === 0
+            ? `merge_sort starts with the whole list ${fmt(piece)}. This is level 0, the top of the tree.`
+            : `merge_sort now works on ${fmt(piece)} (index ${lo} to ${hi}). This is level ${depth} of the tree.`,
+          highlight: range,
+        });
+        save({
+          codeLine: 2,
+          message: len <= 1
+            ? `Does ${fmt(piece)} have 1 number or less? Yes!`
+            : `Does ${fmt(piece)} have 1 number or less? No, it has ${len} numbers, so we need to split it.`,
+          highlight: range,
+        });
+
+        if (len <= 1) {
+          node.status = "done";
+          save({
+            codeLine: 3,
+            message: `A list with just one number is already sorted. So we return ${fmt(piece)} as it is.`,
+            highlight: range,
+          });
+          return;
+        }
+
+        const mid = Math.floor(len / 2);
+        const leftPiece = piece.slice(0, mid);
+        const rightPiece = piece.slice(mid);
+        node.left.values = leftPiece;
+        node.left.status = "waiting";
+        node.right.values = rightPiece;
+        node.right.status = "waiting";
+        save({
+          codeLine: 4,
+          message: `mid = ${len} // 2 = ${mid}. (// means divide and drop the remainder.) So we split into a left half ${fmt(leftPiece)} and a right half ${fmt(rightPiece)}.`,
+          highlight: range,
+        });
+        save({
+          codeLine: 5,
+          message: `First we sort the left half ${fmt(leftPiece)}. merge_sort calls itself on this smaller list.`,
+          highlight: { range: [lo, lo + mid - 1] },
+        });
+
+        node.status = "waiting";
+        mergeSort(node.left);
+        node.status = "active";
+        r.pass = depth;
+        r.phase = "Splitting";
+
+        save({
+          codeLine: 6,
+          message: `Back at ${fmt(piece)}: its left half is now sorted ${fmt(a.slice(lo, lo + mid))}. Next we sort the right half ${fmt(rightPiece)}.`,
+          highlight: { range: [lo + mid, hi] },
+        });
+
+        node.status = "waiting";
+        mergeSort(node.right);
+        node.status = "active";
+        r.pass = depth;
+        r.phase = "Merging";
+
+        save({
+          codeLine: 7,
+          message: `Both halves are sorted: ${fmt(a.slice(lo, lo + mid))} and ${fmt(a.slice(lo + mid, hi + 1))}. Now we merge them into one sorted list.`,
+          highlight: range,
+        });
+
+        merge(node, mid);
+      }
+
+      function merge(node, mid) {
+        const { lo, hi } = node;
+        const L = a.slice(lo, lo + mid);
+        const R = a.slice(lo + mid, hi + 1);
+        const leftIds = r.ids.slice(lo, lo + mid);
+        const rightIds = r.ids.slice(lo + mid, hi + 1);
+        const resultIds = [];
+        ws = { left: L, right: R, i: 0, j: 0, result: [], total: L.length + R.length, comparing: false, moved: null };
+        const range = { range: [lo, hi] };
+
+        save({ codeLine: 9, message: `merge gets two sorted lists: left ${fmt(L)} and right ${fmt(R)}. You can see them in the merge workspace.`, highlight: range });
+        save({ codeLine: 10, message: `result = [] makes an empty list. We will fill it one number at a time, smallest first.`, highlight: range });
+        save({ codeLine: 11, message: `i = 0: the ▲ i arrow points at the first number of the left half, ${L[0]}.`, highlight: range });
+        save({ codeLine: 12, message: `j = 0: the ▲ j arrow points at the first number of the right half, ${R[0]}.`, highlight: range });
+
+        // Take one number from one side and copy it into the result
+        function take(side, codeLine, message) {
+          const fromLeft = side === "left";
+          const k = fromLeft ? ws.i : ws.j;
+          ws.result.push(fromLeft ? L[k] : R[k]);
+          resultIds.push(fromLeft ? leftIds[k] : rightIds[k]);
+          ws.moved = { side, index: k };
+          r.swaps++;
+          save({ codeLine, message, highlight: { ...range, swapping: [fromLeft ? lo + k : lo + mid + k] } });
+          ws.moved = null;
+        }
+
+        while (true) {
+          if (ws.i >= L.length || ws.j >= R.length) {
+            save({
+              codeLine: 13,
+              message: ws.i >= L.length
+                ? `The left half is used up (i is past its end), so the loop stops.`
+                : `The right half is used up (j is past its end), so the loop stops.`,
+              highlight: range,
+            });
+            break;
+          }
+          save({ codeLine: 13, message: `Both halves still have numbers we haven't used, so we keep going.`, highlight: range });
+
+          const x = L[ws.i], y = R[ws.j];
+          r.compare();
+          ws.comparing = true;
+          let message;
+          if (x < y) message = `Compare ${x} (left) with ${y} (right). Is ${x} ≤ ${y}? Yes, so ${x} is the smaller one.`;
+          else if (x === y) message = `Compare ${x} (left) with ${y} (right). They are equal, so we take the left one first. This keeps equal numbers in their original order.`;
+          else message = `Compare ${x} (left) with ${y} (right). Is ${x} ≤ ${y}? No, so ${y} is the smaller one.`;
+          save({ codeLine: 14, message, highlight: { ...range, comparing: [lo + ws.i, lo + mid + ws.j] } });
+          ws.comparing = false;
+
+          if (x <= y) {
+            take("left", 15, `Copy ${x} from the left half into the result.`);
+            ws.i++;
+            save({
+              codeLine: 16,
+              message: ws.i < L.length
+                ? `i += 1: the ▲ i arrow moves to the next number in the left half, ${L[ws.i]}.`
+                : `i += 1: the ▲ i arrow moves past the end. Every number in the left half has been used.`,
+              highlight: range,
+            });
+          } else {
+            take("right", 18, `Copy ${y} from the right half into the result.`);
+            ws.j++;
+            save({
+              codeLine: 19,
+              message: ws.j < R.length
+                ? `j += 1: the ▲ j arrow moves to the next number in the right half, ${R[ws.j]}.`
+                : `j += 1: the ▲ j arrow moves past the end. Every number in the right half has been used.`,
+              highlight: range,
+            });
+          }
+        }
+
+        // Leftovers: they are already sorted, so they just get copied over in order
+        if (ws.i < L.length) {
+          while (ws.i < L.length) {
+            take("left", 20, `Copy the leftover ${L[ws.i]} from the left half into the result. Leftovers are already in order, so no comparing is needed.`);
+            ws.i++;
+          }
+        } else {
+          save({ codeLine: 20, message: `Nothing is left over in the left half, so there is nothing to copy.`, highlight: range });
+        }
+        if (ws.j < R.length) {
+          while (ws.j < R.length) {
+            take("right", 21, `Copy the leftover ${R[ws.j]} from the right half into the result. Leftovers are already in order, so no comparing is needed.`);
+            ws.j++;
+          }
+        } else {
+          save({ codeLine: 21, message: `Nothing is left over in the right half, so there is nothing to copy.`, highlight: range });
+        }
+
+        // Put the merged result back into the main list (the bars slide into place)
+        const before = a.slice(lo, hi + 1);
+        const changed = [];
+        ws.result.forEach((v, k) => {
+          a[lo + k] = v;
+          r.ids[lo + k] = resultIds[k];
+          if (before[k] !== v) changed.push(lo + k);
+        });
+        const result = ws.result.slice();
+        node.values = result;
+        node.status = "done";
+        ws = null;
+        mergeCount++;
+        save({
+          codeLine: 22,
+          message: `return result: ${fmt(L)} and ${fmt(R)} became ${fmt(result)}. Watch the bars slide into this order.`,
+          highlight: { ...range, swapping: changed },
+          history: {
+            label: `Merge ${mergeCount}`,
+            array: a.slice(),
+            changed,
+            note: `${fmt(L)} + ${fmt(R)} → ${fmt(result)}`,
+          },
+        });
+      }
+
+      mergeSort(root);
+
+      r.pass = null;
+      r.phase = "Done";
+      save({
+        codeLine: 7,
+        message: `The last merge put the whole list back together. All done: the list is sorted!`,
+        highlight: { sorted: a.map((_, k) => k) },
+      });
+      return r.steps;
+    }
+
+    /* ----- Drawing the merge workspace (inside the bars card) ----- */
+    function renderWorkspace(step, el) {
+      const ws = step.extra.ws;
+      if (!ws) {
+        el.innerHTML = `<p class="panel-empty">${step.phase === "Splitting"
+          ? "Nothing to merge right now. We are still splitting."
+          : "No merge happening right now."}</p>`;
+        return;
+      }
+      function half(list, pointer, side, arrowName) {
+        const cells = list.map((v, k) => {
+          let cls = "cell";
+          if (k < pointer && !(ws.moved && ws.moved.side === side && ws.moved.index === k)) cls += " used";
+          if (ws.comparing && k === pointer) cls += " comparing";
+          if (ws.moved && ws.moved.side === side && ws.moved.index === k) cls += " moved";
+          const arrow = k === pointer ? `▲ ${arrowName}` : "";
+          return `<div><div class="${cls}">${v}</div><div class="cell-arrow">${arrow}</div></div>`;
+        }).join("");
+        const done = pointer >= list.length ? `<div class="cell-arrow">${arrowName} ✓ used up</div>` : "";
+        return `<div class="cells">${cells}${done}</div>`;
+      }
+      const resultCells = Array.from({ length: ws.total }, (_, k) => {
+        if (k >= ws.result.length) return `<div class="cell empty">0</div>`;
+        const isNew = ws.moved && k === ws.result.length - 1;
+        return `<div class="cell ${isNew ? "moved" : "done"}">${ws.result[k]}</div>`;
+      }).join("");
+      el.innerHTML = `
+        <div class="workspace">
+          <div class="ws-label">Left half</div>${half(ws.left, ws.i, "left", "i")}
+          <div class="ws-label">Right half</div>${half(ws.right, ws.j, "right", "j")}
+          <div class="ws-label">Result</div><div class="cells">${resultCells}</div>
+          <div class="ws-note">Crossed-out numbers are already in the result.</div>
+        </div>`;
+    }
+
+    /* ----- Drawing the tree (full-width card) ----- */
+    function renderTree(step, el, page) {
+      const tree = step.extra.tree;
+      const levels = Math.max(...tree.map((nd) => nd.depth)) + 1;
+      let html = `<div class="tree">`;
+      for (let d = 0; d < levels; d++) {
+        const nodesHtml = tree.filter((nd) => nd.depth === d).map((nd) => {
+          const cells = nd.values.map((v) => `<span class="cell">${v}</span>`).join("");
+          const tag = nd.status === "done" ? `<span class="node-tag">✓</span>` : "";
+          return `<div class="tree-node ${nd.status}" style="grid-column:${nd.lo + 1} / ${nd.hi + 2}">${cells}${tag}</div>`;
+        }).join("");
+        html += `<div class="tree-row"><div class="level-label">Level ${d}</div>
+          <div class="tree-nodes" style="grid-template-columns:repeat(${page.n}, 1fr)">${nodesHtml}</div></div>`;
+      }
+      html += `</div><div class="tree-legend">Dashed box = waiting for its turn · Blue glow = working on it now · Green ✓ = sorted</div>`;
+      el.innerHTML = html;
+    }
+  </script>
+
+  <script>
+    SortPage.init({
+      title: "Merge Sort",
+      bigIdea: `
+        <p>Imagine sorting a big pile of exam papers. You split the pile in half, then in half again,
+        until every pile has just <b>one</b> paper. A pile of one is already sorted!</p>
+        <p>Then you <b>merge</b> piles two at a time: look at the top paper of each pile, take the smaller one,
+        and repeat. Merging two sorted piles is easy, so the whole pile ends up sorted.</p>`,
+      code: MERGE_CODE,
+      record: recordMergeSort,
+      defaultArray: [38, 27, 43, 3, 9, 82, 10],
+      passLabel: "Level",
+      phaseLabel: "Phase",
+      swapLabel: "Moves",
+      defaultSpeed: 0,
+      historyTitle: "Merge history — the whole array after each merge",
+      extraLegend: [
+        { symbol: "i", text: "▲ i / ▲ j = the next number to use from the left / right half" },
+        { symbol: "#", text: "Moves = how many numbers were copied into a result list" },
+      ],
+      panels: [
+        { title: "Merge workspace", render: renderWorkspace },
+        { title: "Tree view: split down, then merge back up", render: renderTree },
+      ],
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quick Sort — Sorting Visualizer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page" id="app"></div>
+
+  <script src="engine.js"></script>
+
+  <!-- The quick sort itself (Lomuto partition). It runs once and RECORDS every step. -->
+  <script id="algorithm">
+    const QUICK_CODE = [
+      "def quick_sort(arr, low, high):",
+      "    if low < high:",
+      "        p = partition(arr, low, high)",
+      "        quick_sort(arr, low, p - 1)",
+      "        quick_sort(arr, p + 1, high)",
+      "",
+      "def partition(arr, low, high):",
+      "    pivot = arr[high]",
+      "    i = low - 1",
+      "    for j in range(low, high):",
+      "        if arr[j] <= pivot:",
+      "            i += 1",
+      "            arr[i], arr[j] = arr[j], arr[i]",
+      "    arr[i + 1], arr[high] = arr[high], arr[i + 1]",
+      "    return i + 1",
+    ];
+
+    function recordQuickSort(array) {
+      const r = new Recorder(array);
+      const a = r.arr;
+      const n = a.length;
+      const fmt = (list) => "[" + list.join(", ") + "]";
+      const sorted = [];       // positions that are in their final place (green)
+      let todo = [[0, n - 1]]; // parts still waiting to be sorted, next one first
+      let current = null;      // the part we are working on now
+      r.pass = 0;
+
+      // Save a step: always show the green bars, plus the to-do list as it is now
+      function save(step) {
+        r.step({
+          ...step,
+          highlight: { sorted: [...sorted], ...step.highlight },
+          extra: { todo: todo.map((t) => t.slice()), current: current && current.slice() },
+        });
+      }
+
+      // Labels for i and j under the index boxes. If i is just before the part, show "◄ i" on its first box.
+      function labels(i, j, lo) {
+        const texts = {};
+        const add = (k, t) => { texts[k] = texts[k] ? texts[k] + " / " + t : t; };
+        if (i < lo) add(lo, "◄ i"); else add(i, "▲ i");
+        if (j !== null) add(j, "▲ j");
+        return Object.keys(texts).map((k) => ({ index: Number(k), text: texts[k] }));
+      }
+
+      save({
+        codeLine: 1,
+        message: `Here are our ${n} numbers. Quick sort picks a "pivot" number, puts smaller numbers on its left and bigger ones on its right, then does the same to each side. The to-do list shows the parts still waiting to be sorted.`,
+        history: { label: "Start", array: a.slice(), note: "Before sorting" },
+      });
+
+      function quickSort(lo, hi) {
+        todo.shift();             // take this part off the front of the to-do list
+        current = [lo, hi];
+        const range = { range: [lo, hi] };
+        save({
+          codeLine: 1,
+          message: `Take the next part from the to-do list: index ${lo} to ${hi}, which is ${fmt(a.slice(lo, hi + 1))}.`,
+          highlight: range,
+        });
+
+        if (lo === hi) {
+          sorted.push(lo);
+          save({
+            codeLine: 2,
+            message: `Is low < high? No, low and high are both ${lo}. A part with just one number (${a[lo]}) is already sorted ✓.`,
+            highlight: range,
+          });
+          current = null;
+          return;
+        }
+
+        save({
+          codeLine: 2,
+          message: `Is low < high? Yes (${lo} < ${hi}). This part has ${hi - lo + 1} numbers, so we need to partition it.`,
+          highlight: range,
+        });
+        save({
+          codeLine: 3,
+          message: `Call partition: it will pick a pivot and move small numbers to its left and big numbers to its right.`,
+          highlight: range,
+        });
+
+        r.pass++;
+        const p = partition(lo, hi);
+
+        // The two sides go to the front of the to-do list (left side first). Empty sides are skipped.
+        const sides = [];
+        if (p - 1 >= lo) sides.push([lo, p - 1]);
+        if (hi >= p + 1) sides.push([p + 1, hi]);
+        todo = [...sides, ...todo];
+
+        if (p - 1 >= lo) {
+          save({
+            codeLine: 4,
+            message: `Now quick sort the LEFT side of the pivot: index ${lo} to ${p - 1}, ${fmt(a.slice(lo, p))}.`,
+            highlight: { range: [lo, p - 1] },
+          });
+          quickSort(lo, p - 1);
+          current = [lo, hi];
+        } else {
+          save({
+            codeLine: 4,
+            message: `The LEFT side of the pivot is empty (no numbers smaller than it here), so there is nothing to sort.`,
+            highlight: range,
+          });
+        }
+
+        if (hi >= p + 1) {
+          save({
+            codeLine: 5,
+            message: `Now quick sort the RIGHT side of the pivot: index ${p + 1} to ${hi}, ${fmt(a.slice(p + 1, hi + 1))}.`,
+            highlight: { range: [p + 1, hi] },
+          });
+          quickSort(p + 1, hi);
+        } else {
+          save({
+            codeLine: 5,
+            message: `The RIGHT side of the pivot is empty (no numbers bigger than it here), so there is nothing to sort.`,
+            highlight: range,
+          });
+        }
+        current = null;
+      }
+
+      function partition(lo, hi) {
+        const pivot = a[hi];
+        const hl = (extra = {}) => ({ range: [lo, hi], pivot: hi, pivotLine: pivot, ...extra });
+
+        save({
+          codeLine: 7,
+          message: `partition works on index ${lo} to ${hi}. Goal: small numbers on the left, big numbers on the right.`,
+          highlight: { range: [lo, hi] },
+        });
+        save({
+          codeLine: 8,
+          message: `pivot = arr[high] = ${pivot}. We always pick the LAST number as the pivot. The purple dashed line shows how tall it is.`,
+          highlight: hl(),
+        });
+
+        let i = lo - 1;
+        save({
+          codeLine: 9,
+          message: `i = low - 1 = ${i}. Everything up to i is the "small-numbers area" (numbers ≤ ${pivot}). It is empty right now, so i starts just before the part.`,
+          highlight: hl(),
+          markers: labels(i, null, lo),
+        });
+
+        for (let j = lo; j < hi; j++) {
+          save({
+            codeLine: 10,
+            message: `j = ${j}: look at ${a[j]}.`,
+            highlight: hl(),
+            markers: labels(i, j, lo),
+          });
+
+          r.compare();
+          if (a[j] <= pivot) {
+            save({
+              codeLine: 11,
+              message: `Is ${a[j]} ≤ ${pivot}? Yes. ${a[j]} is a small number, so it belongs in the small-numbers area.`,
+              highlight: hl({ comparing: [j] }),
+              markers: labels(i, j, lo),
+            });
+            i++;
+            save({
+              codeLine: 12,
+              message: `i += 1: the small-numbers area grows by one place. i is now ${i}.`,
+              highlight: hl(),
+              markers: labels(i, j, lo),
+            });
+            if (i === j) {
+              // A "self-swap": not counted and not animated, but still explained
+              save({
+                codeLine: 13,
+                message: `${a[j]} is already in the small-numbers area, so no swap is needed.`,
+                highlight: hl(),
+                markers: labels(i, j, lo),
+              });
+            } else {
+              const big = a[i], small = a[j];
+              r.swap(i, j);
+              save({
+                codeLine: 13,
+                message: `Swap ${small} and ${big}: ${small} moves into the small-numbers area (index ${i}), and ${big} moves to index ${j}.`,
+                highlight: hl({ swapping: [i, j] }),
+                markers: labels(i, j, lo),
+              });
+            }
+          } else {
+            save({
+              codeLine: 11,
+              message: `Is ${a[j]} ≤ ${pivot}? No, ${a[j]} is bigger. It stays where it is, and i does not move.`,
+              highlight: hl({ comparing: [j] }),
+              markers: labels(i, j, lo),
+            });
+          }
+        }
+
+        save({
+          codeLine: 10,
+          message: i < lo
+            ? `j has reached the pivot, so the loop is done. No number was ≤ ${pivot}, so the small-numbers area is empty.`
+            : `j has reached the pivot, so the loop is done. Index ${lo} to ${i} hold the small numbers (≤ ${pivot}).`,
+          highlight: hl(),
+          markers: labels(i, null, lo),
+        });
+
+        const p = i + 1;
+        if (p === hi) {
+          // Pivot already right after the small numbers: another self-swap, not counted or animated
+          save({
+            codeLine: 14,
+            message: `The pivot ${pivot} is already right after the small numbers (index ${p}), so no swap is needed.`,
+            highlight: hl(),
+          });
+        } else {
+          const other = a[p];
+          r.swap(p, hi);
+          save({
+            codeLine: 14,
+            message: `Swap the pivot ${pivot} with ${other}. Now the pivot sits at index ${p}, right after the small numbers.`,
+            highlight: { range: [lo, hi], pivot: p, pivotLine: pivot, swapping: [p, hi] },
+          });
+        }
+
+        sorted.push(p);
+        const leftSide = a.slice(lo, p), rightSide = a.slice(p + 1, hi + 1);
+        save({
+          codeLine: 15,
+          message: `return ${p}: the pivot ${pivot} is now in its FINAL place ✓. ` +
+            `Everything on its left is ≤ ${pivot}, and everything on its right is bigger.`,
+          highlight: { range: [lo, hi], pivotLine: pivot },
+          history: {
+            label: `Partition ${r.pass}`,
+            array: a.slice(),
+            sorted: [...sorted],
+            note: `Pivot ${pivot} → index ${p}. Left ${fmt(leftSide)}, right ${fmt(rightSide)}`,
+          },
+        });
+        return p;
+      }
+
+      quickSort(0, n - 1);
+
+      save({
+        codeLine: 1,
+        message: `The to-do list is empty, and every number is in its final place. All done: the array is sorted!`,
+      });
+      return r.steps;
+    }
+
+    /* ----- Drawing the to-do list (inside the bars card) ----- */
+    function renderTodo(step, el) {
+      const part = ([lo, hi]) =>
+        `<span>index ${lo} to ${hi}:</span> <span class="cells">${step.array.slice(lo, hi + 1).map((v) => `<span class="cell">${v}</span>`).join("")}</span>`;
+      let html = "";
+      if (step.extra.current) html += `<li class="now">Working on now → ${part(step.extra.current)}</li>`;
+      step.extra.todo.forEach((t, k) => {
+        html += `<li>${k === 0 ? "Next up" : "Waiting"} → ${part(t)}</li>`;
+      });
+      el.innerHTML = html
+        ? `<ul class="todo">${html}</ul>`
+        : `<p class="panel-empty">The to-do list is empty.</p>`;
+    }
+  </script>
+
+  <script>
+    SortPage.init({
+      title: "Quick Sort",
+      bigIdea: `
+        <p>Imagine a teacher picks one student as the <b>pivot</b> and says: "Everyone shorter than this student, stand on the left.
+        Everyone taller, stand on the right." Now the pivot student is standing in exactly the right spot!</p>
+        <p>Then the teacher does the same thing with the left group, and with the right group, until every group is just one student.</p>`,
+      code: QUICK_CODE,
+      record: recordQuickSort,
+      defaultArray: [10, 80, 30, 90, 40, 50, 70],
+      passLabel: "Partition",
+      swapLabel: "Swaps",
+      extraLegend: [
+        { symbol: "┅", text: "Purple dashed line = the pivot's height" },
+        { symbol: "i", text: "▲ i = end of the small-numbers area · ▲ j = number we are checking" },
+        { symbol: "░", text: "Faded bars = outside the part we are working on" },
+      ],
+      panels: [
+        { title: "To-do list: parts waiting to be sorted", render: renderTodo },
+      ],
+    });
+  </script>
+</body>
+</html>

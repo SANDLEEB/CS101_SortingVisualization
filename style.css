@@ -1,0 +1,462 @@
+/* ============================================================
+   Sorting Visualizer — shared styles
+   Big fonts + high contrast so it reads well on a projector.
+   ============================================================ */
+
+:root {
+  /* Colors for the bars (also used in the legend) */
+  --gray: #9aa3ad;      /* not looked at yet */
+  --yellow: #f7c948;    /* being compared */
+  --red: #e5484d;       /* being swapped / moved */
+  --green: #30a46c;     /* in final sorted place */
+  --purple: #8e4ec6;    /* pivot (quick sort) */
+  --blue: #3e8ede;      /* current sub-array (merge / quick) */
+
+  --bg: #f6f7fb;
+  --card: #ffffff;
+  --text: #1c2024;
+  --muted: #555d66;
+  --border: #d4d8de;
+  --accent: #2f6fdd;
+  --code-bg: #1e2430;
+  --code-text: #e8ecf2;
+  --code-highlight: #ffe066;
+
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  font-size: 20px;
+  line-height: 1.5;
+  background: var(--bg);
+  color: var(--text);
+}
+
+a { color: var(--accent); }
+
+.page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px 20px 60px;
+}
+
+header.top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+header.top h1 { margin: 0; font-size: 2rem; }
+header.top .home-link {
+  font-size: 1rem;
+  text-decoration: none;
+  border: 2px solid var(--accent);
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+.card {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+/* ---------- Big idea ---------- */
+.big-idea {
+  background: #fff8e1;
+  border-color: #f2d27a;
+  font-size: 1.15rem;
+}
+.big-idea p { margin: 4px 0; }
+
+/* ---------- Layout: visual on the left, code on the right ---------- */
+.main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 1000px) {
+  .main-grid { grid-template-columns: 1fr; }
+}
+
+/* ---------- Legend ---------- */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  font-size: 1rem;
+}
+.legend-item { display: flex; align-items: center; gap: 8px; }
+.swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  font-weight: 700;
+  color: #111;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+}
+
+/* ---------- Counters ---------- */
+.counters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.counter {
+  flex: 1 1 auto;
+  min-width: 90px;
+  white-space: nowrap;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 8px 10px;
+  text-align: center;
+}
+.counter .label { font-size: 0.9rem; color: var(--muted); }
+.counter .value { font-size: 1.6rem; font-weight: 700; }
+
+/* ---------- Array view (bars) ---------- */
+.array-view {
+  position: relative;
+  padding-top: 100px; /* room for the "lifted" key bar */
+}
+.bars {
+  position: relative;
+  height: 300px;
+  border-bottom: 3px solid var(--text);
+}
+.bar {
+  position: absolute;
+  bottom: 0;
+  padding: 0 4px;
+  transition: left 0.45s ease, height 0.45s ease, transform 0.45s ease, opacity 0.3s;
+}
+.bar .fill {
+  position: relative;
+  height: 100%;
+  border-radius: 8px 8px 0 0;
+  background: var(--gray);
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-bottom: none;
+  transition: background-color 0.25s;
+}
+.bar .num {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 6px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.3rem;
+  color: #111;
+}
+.bar .tag {
+  position: absolute;
+  left: 0; right: 0;
+  top: -34px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+
+.bar.comparing .fill { background: var(--yellow); }
+.bar.swapping  .fill { background: var(--red); }
+.bar.sorted    .fill { background: var(--green); }
+.bar.pivot     .fill { background: var(--purple); }
+.bar.in-range  .fill { background: var(--blue); }
+.bar.swapping .num, .bar.sorted .num, .bar.pivot .num, .bar.in-range .num { color: #fff; }
+.bar.faded { opacity: 0.25; }
+.bar.key   { transform: translateY(-60px); }
+.bar.outlined .fill { outline: 4px dashed var(--text); outline-offset: 2px; }
+
+/* Dashed line that splits "sorted" from "unsorted" */
+.boundary {
+  position: absolute;
+  top: -10px;
+  bottom: -8px;
+  border-left: 4px dashed var(--text);
+  transition: left 0.45s ease;
+  pointer-events: none;
+}
+.boundary .side {
+  position: absolute;
+  top: -30px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--card);
+  padding: 0 4px;
+}
+.boundary .side.left  { right: 6px; color: var(--green); }
+.boundary .side.right { left: 6px; color: var(--muted); }
+
+/* Dashed line at the pivot's height (quick sort) */
+.pivot-line {
+  position: absolute;
+  left: 0; right: 0;
+  border-top: 4px dashed var(--purple);
+  transition: bottom 0.45s ease;
+  pointer-events: none;
+}
+.pivot-line .pivot-label {
+  position: absolute;
+  right: 0;
+  top: -30px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--purple);
+  background: var(--card);
+  padding: 0 6px;
+  border-radius: 6px;
+}
+
+/* Index boxes and marker row under the bars */
+.index-row, .marker-row {
+  position: relative;
+  display: grid;
+  gap: 0;
+}
+.index-box {
+  margin: 6px 4px 0;
+  text-align: center;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  font-size: 1rem;
+}
+.index-box .idx-label { color: var(--muted); font-size: 0.8rem; display: block; line-height: 1.1; }
+.index-box .idx-num { font-weight: 700; }
+.marker {
+  text-align: center;
+  font-weight: 800;
+  font-size: 1rem;
+  min-height: 1.6em;
+  color: var(--accent);
+}
+
+/* ---------- Explanation ---------- */
+.explain {
+  font-size: 1.4rem;
+  font-weight: 600;
+  min-height: 3.2em;
+  background: #eef4ff;
+  border-color: #b8cdf5;
+}
+
+/* ---------- Controls ---------- */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+button, .btn {
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 2px solid var(--accent);
+  background: var(--card);
+  color: var(--accent);
+  cursor: pointer;
+}
+button:hover:not(:disabled), .btn:hover { background: #e8f0ff; }
+button.primary { background: var(--accent); color: #fff; }
+button.primary:hover:not(:disabled) { background: #2259b8; }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+
+.speed { display: flex; align-items: center; gap: 8px; font-size: 1rem; }
+.speed input { width: 140px; }
+
+.custom-input { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.custom-input input[type="text"] {
+  font: inherit;
+  font-size: 1.05rem;
+  padding: 7px 10px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  width: 240px;
+}
+.input-error {
+  color: #b42318;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-top: 6px;
+  min-height: 1.4em;
+}
+.hint { color: var(--muted); font-size: 0.9rem; }
+
+/* The color guide sits inside the controls card, under the buttons */
+.controls-card .legend {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 2px solid var(--border);
+}
+
+/* ---------- Code panel ---------- */
+.code {
+  background: var(--code-bg);
+  color: var(--code-text);
+  border-radius: 10px;
+  padding: 10px 0;
+  margin: 0;
+  list-style: none;
+  counter-reset: line;
+  font-family: "Menlo", "Consolas", "Courier New", monospace;
+  font-size: 18px; /* must stay >= 16px */
+  overflow-x: auto;
+}
+.code li {
+  counter-increment: line;
+  white-space: pre;
+  padding: 2px 6px 2px 0;
+  border-left: 6px solid transparent;
+}
+.code li::before {
+  content: counter(line);
+  display: inline-block;
+  width: 1.6em;
+  margin-right: 12px;
+  text-align: right;
+  color: #8a94a6;
+}
+.code li.current {
+  background: var(--code-highlight);
+  color: #111;
+  border-left-color: #c48a00;
+  font-weight: 700;
+}
+.code li.current::before { color: #444; }
+
+/* ---------- Pass history table ---------- */
+.history-wrap { overflow-x: auto; }
+table.history {
+  border-collapse: collapse;
+  font-size: 1.05rem;
+}
+table.history th, table.history td {
+  border: 2px solid var(--border);
+  padding: 4px 12px;
+  text-align: center;
+}
+table.history th { background: var(--bg); }
+table.history td.row-label { font-weight: 700; text-align: left; white-space: nowrap; }
+table.history td.note { text-align: left; color: var(--muted); font-size: 0.95rem; }
+table.history td.done { background: var(--green); color: #fff; font-weight: 700; }
+table.history td.changed { outline: 3px solid var(--red); outline-offset: -3px; font-weight: 700; }
+
+/* ---------- Extra panels (merge tree / workspace, quick sort to-do list) ---------- */
+.panel-empty { color: var(--muted); font-style: italic; font-size: 1rem; }
+
+/* A row of number boxes (used by the merge workspace and tree) */
+.cells { display: flex; gap: 6px; flex-wrap: wrap; }
+.cell {
+  min-width: 46px;
+  padding: 4px 8px;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.2rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+}
+.cell.comparing { background: var(--yellow); }
+.cell.moved     { background: var(--red); color: #fff; }
+.cell.used      { opacity: 0.35; text-decoration: line-through; }
+.cell.empty     { color: transparent; border-style: dashed; }
+.cell.done      { background: var(--green); color: #fff; }
+.cell-arrow     { min-width: 46px; text-align: center; font-weight: 800; color: var(--accent); font-size: 1rem; }
+
+/* Merge workspace */
+.workspace { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: center; }
+.workspace .ws-label { font-weight: 700; font-size: 1rem; white-space: nowrap; }
+.workspace .ws-note { grid-column: 2; color: var(--muted); font-size: 0.95rem; min-height: 1.4em; }
+
+/* Merge tree: one row per level, boxes line up with the index boxes above */
+.tree { display: flex; flex-direction: column; gap: 10px; overflow-x: auto; }
+.tree-row { display: grid; grid-template-columns: 90px 1fr; align-items: center; }
+.tree-row .level-label { font-weight: 700; color: var(--muted); font-size: 1rem; }
+.tree-nodes { display: grid; gap: 0; }
+.tree-node {
+  margin: 0 6px;
+  padding: 6px;
+  border: 3px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+.tree-node .cell { min-width: 38px; font-size: 1.05rem; padding: 2px 4px; }
+.tree-node.hidden  { visibility: hidden; }
+.tree-node.waiting { border-style: dashed; }
+.tree-node.active  { border-color: var(--blue); background: #dcebfb; box-shadow: 0 0 0 3px var(--blue); }
+.tree-node.done    { border-color: var(--green); background: #dff3e8; }
+.tree-node.done .cell { border-color: var(--green); }
+.tree-node .node-tag { font-weight: 800; align-self: center; margin-left: 4px; }
+.tree-legend { font-size: 0.95rem; color: var(--muted); margin-top: 8px; }
+
+/* Quick sort to-do list */
+.todo { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.todo li {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: 1.05rem;
+  padding: 6px 10px;
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+}
+.todo li.now { border: 3px solid var(--blue); background: #dcebfb; font-weight: 700; }
+
+/* ---------- Home page ---------- */
+.algo-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+.algo-btn {
+  display: block;
+  text-decoration: none;
+  padding: 18px;
+  border-radius: var(--radius);
+  border: 3px solid var(--accent);
+  background: var(--card);
+  color: var(--text);
+}
+.algo-btn:hover { background: #e8f0ff; }
+.algo-btn .name { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
+.algo-btn .desc { font-size: 1rem; color: var(--muted); }
+.algo-btn.soon { border-style: dashed; border-color: var(--border); cursor: default; }
+.algo-btn.soon:hover { background: var(--card); }
+.algo-btn.soon .name { color: var(--muted); }
+
+table.compare {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 1.05rem;
+}
+table.compare th, table.compare td {
+  border: 2px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+table.compare th { background: var(--bg); }
