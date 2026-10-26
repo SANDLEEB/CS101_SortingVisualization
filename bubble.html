@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bubble Sort — Sorting Visualizer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page" id="app"></div>
+
+  <script src="engine.js"></script>
+
+  <!-- The bubble sort itself. It runs once and RECORDS every step. -->
+  <script id="algorithm">
+    const BUBBLE_CODE = [
+      "void bubbleSort(vector<int>& arr) {",
+      "    int n = arr.size();",
+      "    for (int i = 0; i < n - 1; i++) {",
+      "        bool swapped = false;",
+      "        for (int j = 0; j < n - 1 - i; j++) {",
+      "            if (arr[j] > arr[j + 1]) {",
+      "                swap(arr[j], arr[j + 1]);",
+      { text: "                swapped = true;", joinAbove: true },
+      "            }",
+      "        }",
+      "        if (!swapped)",
+      "            break;",
+      "    }",
+      "}  // the end: arr is now sorted",
+    ];
+
+    function recordBubbleSort(array) {
+      const r = new Recorder(array);
+      const a = r.arr;           // the array being sorted (changes as we swap)
+      const n = a.length;
+      const sorted = [];         // positions that are finished (green), filling up from the right
+
+      // Labels under the boxes: the two neighbors we are comparing
+      function labels(j) {
+        return [{ index: j, text: "▲ j" }, { index: j + 1, text: "▲ j+1" }];
+      }
+
+      r.step({
+        codeLine: 1,
+        message: `Here are our ${n} numbers. Bubble sort only ever compares two neighbors (numbers side by side). If the left one is bigger, they swap.`,
+        highlight: { boundary: n },
+        history: { label: "Start", array: a.slice(), sorted: [], note: "Before sorting" },
+      });
+      r.step({
+        codeLine: 2,
+        message: `int n = arr.size(); means "count the numbers". We have n = ${n}.`,
+        highlight: { boundary: n },
+      });
+
+      let stoppedEarly = false;
+      for (let i = 0; i < n - 1; i++) {
+        r.pass = i + 1;
+        const end = n - 1 - i;   // last index in the unsorted area
+        r.step({
+          codeLine: 3,
+          message: i === 0
+            ? `Pass 1: walk from the left end to the right end, comparing each pair of neighbors. The biggest number will be pushed all the way to the right.`
+            : `Pass ${i + 1}: walk again, but only up to index ${end}. The numbers after the dashed line are already done, so we skip them.`,
+          highlight: { sorted: [...sorted], boundary: end + 1 },
+        });
+        r.step({
+          codeLine: 4,
+          message: `swapped = false means "no swaps yet in this pass". If it is still false at the end, the list is already in order.`,
+          highlight: { sorted: [...sorted], boundary: end + 1 },
+        });
+        r.step({
+          codeLine: 5,
+          message: `j starts at 0. We look at index j and its right neighbor, index j+1.`,
+          highlight: { sorted: [...sorted], boundary: end + 1 },
+          markers: labels(0),
+        });
+
+        let swapped = false;
+        let passSwaps = 0;
+        for (let j = 0; j < end; j++) {
+          r.compare();
+          const left = a[j], right = a[j + 1];
+          if (left > right) {
+            r.step({
+              codeLine: 6,
+              message: `Compare ${left} and ${right}. Is ${left} bigger than ${right}? Yes, so they are in the wrong order.`,
+              highlight: { comparing: [j, j + 1], sorted: [...sorted], boundary: end + 1 },
+              markers: labels(j),
+            });
+            r.swap(j, j + 1);
+            swapped = true;
+            passSwaps++;
+            r.step({
+              codeLine: 7,
+              message: `Swap! ${right} moves left and ${left} moves right. swapped is now true.`,
+              highlight: { swapping: [j, j + 1], sorted: [...sorted], boundary: end + 1 },
+              markers: labels(j),
+            });
+          } else {
+            r.step({
+              codeLine: 6,
+              message: left === right
+                ? `Compare ${left} and ${right}. They are the same, so no swap (we only swap if the left one is bigger).`
+                : `Compare ${left} and ${right}. Is ${left} bigger than ${right}? No, they are already in order. No swap.`,
+              highlight: { comparing: [j, j + 1], sorted: [...sorted], boundary: end + 1 },
+              markers: labels(j),
+            });
+          }
+          if (j + 1 < end) {
+            r.step({
+              codeLine: 5,
+              message: `j moves one step right, to index ${j + 1}. Next neighbors: ${a[j + 1]} and ${a[j + 2]}.`,
+              highlight: { sorted: [...sorted], boundary: end + 1 },
+              markers: labels(j + 1),
+            });
+          }
+        }
+
+        if (!swapped) {
+          r.step({
+            codeLine: 8,
+            message: `We reached index ${end}. Is swapped still false? Yes: no swaps happened in this whole pass, so every pair of neighbors is in order.`,
+            highlight: { sorted: [...sorted], boundary: end + 1 },
+          });
+          for (let k = 0; k <= end; k++) sorted.unshift(k);
+          r.step({
+            codeLine: 9,
+            message: `break: stop early! The whole array is already sorted, so there is no need for more passes.`,
+            highlight: { sorted: [...sorted], boundary: 0 },
+            history: {
+              label: `Pass ${i + 1}`,
+              array: a.slice(),
+              sorted: [...sorted],
+              changed: [],
+              note: "No swaps: already sorted, stop early",
+            },
+          });
+          stoppedEarly = true;
+          break;
+        }
+
+        sorted.unshift(end);
+        if (i === n - 2) sorted.unshift(0);   // the last pass also finishes index 0
+        const left = end;   // how many numbers are still unsorted after this pass
+        r.step({
+          codeLine: 8,
+          message: `End of pass ${i + 1}: swapped is true, so we keep going. ${a[end]} was the biggest number in the unsorted area, so it bubbled up to index ${end}. It is in its final place (green ✓). ` +
+            (left > 1
+              ? `Next pass checks one less number, because the right end is already done.`
+              : `Only ${a[0]} is left, and one number on its own is always in order.`),
+          highlight: { sorted: [...sorted], boundary: end },
+          history: {
+            label: `Pass ${i + 1}`,
+            array: a.slice(),
+            sorted: [...sorted],
+            changed: [end],
+            note: `${passSwaps} swap${passSwaps > 1 ? "s" : ""}: ${a[end]} bubbled to the end`,
+          },
+        });
+      }
+
+      r.step({
+        codeLine: 10,
+        message: stoppedEarly
+          ? `All done: the array is sorted! Stopping early saved us some passes.`
+          : `All done: the array is sorted!`,
+        highlight: { sorted: a.map((_, k) => k), boundary: 0 },
+      });
+
+      return r.steps;
+    }
+  </script>
+
+  <script>
+    SortPage.init({
+      title: "Bubble Sort",
+      bigIdea: `
+        <p>Think of bubbles in a glass of soda: the big ones rise to the top. In each pass, the
+        <b>biggest</b> number left floats all the way to the right end.</p>
+        <p>We only ever compare two neighbors. After each pass one more number is done on the right, so the
+        next pass checks <b>one less</b>. If a whole pass makes no swaps, everything is in order and we stop early.</p>`,
+      code: BUBBLE_CODE,
+      record: recordBubbleSort,
+      defaultArray: [5, 1, 4, 2, 8],
+      call: "bubbleSort(arr);",
+      passLabel: "Pass",
+      swapLabel: "Swaps",
+      boundaryLabels: ["← still unsorted", "done →"],
+      extraLegend: [
+        { symbol: "j", text: "j and j+1 = the two neighbors we compare" },
+        { symbol: "┆", text: "Dashed line = still unsorted | done (grows from the right)" },
+      ],
+    });
+  </script>
+</body>
+</html>
