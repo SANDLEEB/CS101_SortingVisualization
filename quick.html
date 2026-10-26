@@ -14,21 +14,26 @@
   <!-- The quick sort itself (Lomuto partition). It runs once and RECORDS every step. -->
   <script id="algorithm">
     const QUICK_CODE = [
-      "def quick_sort(arr, low, high):",
-      "    if low < high:",
-      "        p = partition(arr, low, high)",
-      "        quick_sort(arr, low, p - 1)",
-      "        quick_sort(arr, p + 1, high)",
+      "void quickSort(vector<int>& arr, int low, int high) {",
+      "    if (low < high) {",
+      "        int p = partition(arr, low, high);",
+      "        quickSort(arr, low, p - 1);",
+      "        quickSort(arr, p + 1, high);",
+      "    }",
+      "}",
       "",
-      "def partition(arr, low, high):",
-      "    pivot = arr[high]",
-      "    i = low - 1",
-      "    for j in range(low, high):",
-      "        if arr[j] <= pivot:",
-      "            i += 1",
-      "            arr[i], arr[j] = arr[j], arr[i]",
-      "    arr[i + 1], arr[high] = arr[high], arr[i + 1]",
-      "    return i + 1",
+      "int partition(vector<int>& arr, int low, int high) {",
+      "    int pivot = arr[high];",
+      "    int i = low - 1;",
+      "    for (int j = low; j < high; j++) {",
+      "        if (arr[j] <= pivot) {",
+      "            i++;",
+      "            swap(arr[i], arr[j]);",
+      "        }",
+      "    }",
+      "    swap(arr[i + 1], arr[high]);",
+      "    return i + 1;",
+      "}",
     ];
 
     function recordQuickSort(array) {
@@ -181,7 +186,7 @@
             i++;
             save({
               codeLine: 12,
-              message: `i += 1: the small-numbers area grows by one place. i is now ${i}.`,
+              message: `i++: the small-numbers area grows by one place. i is now ${i}.`,
               highlight: hl(),
               markers: labels(i, j, lo),
             });
@@ -291,6 +296,7 @@
       code: QUICK_CODE,
       record: recordQuickSort,
       defaultArray: [10, 80, 30, 90, 40, 50, 70],
+      call: "quickSort(arr, 0, arr.size() - 1);",
       passLabel: "Partition",
       swapLabel: "Swaps",
       extraLegend: [

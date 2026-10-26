@@ -345,6 +345,22 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
   font-weight: 700;
 }
 .code li.current::before { color: #444; }
+.code-setup {
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  white-space: pre;
+}
+.code-note {
+  margin: 6px 0;
+  font-size: 16px;
+  color: var(--muted);
+}
+.code-note code {
+  font-family: "Menlo", "Consolas", "Courier New", monospace;
+  background: #eef1f6;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
 
 /* ---------- Pass history table ---------- */
 .history-wrap { overflow-x: auto; }

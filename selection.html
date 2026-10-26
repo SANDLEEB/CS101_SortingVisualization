@@ -14,16 +14,18 @@
   <!-- The selection sort itself. It runs once and RECORDS every step. -->
   <script id="algorithm">
     const SELECTION_CODE = [
-      "def selection_sort(arr):",
-      "    n = len(arr)",
-      "    for i in range(n - 1):",
-      "        min_index = i",
-      "        for j in range(i + 1, n):",
-      "            if arr[j] < arr[min_index]:",
-      "                min_index = j",
-      "        if min_index != i:",
-      "            arr[i], arr[min_index] = arr[min_index], arr[i]",
-      "    return arr",
+      "void selectionSort(vector<int>& arr) {",
+      "    int n = arr.size();",
+      "    for (int i = 0; i < n - 1; i++) {",
+      "        int minIndex = i;",
+      "        for (int j = i + 1; j < n; j++) {",
+      "            if (arr[j] < arr[minIndex])",
+      "                minIndex = j;",
+      "        }",
+      "        if (minIndex != i)",
+      "            swap(arr[i], arr[minIndex]);",
+      "    }",
+      "}  // the end: arr is now sorted",
     ];
 
     function recordSelectionSort(array) {
@@ -47,7 +49,7 @@
       });
       r.step({
         codeLine: 2,
-        message: `n = len(arr) means "count the numbers". We have n = ${n}.`,
+        message: `int n = arr.size(); means "count the numbers". We have n = ${n}.`,
         highlight: { boundary: 0 },
       });
 
@@ -168,6 +170,7 @@
       code: SELECTION_CODE,
       record: recordSelectionSort,
       defaultArray: [64, 25, 12, 22, 11],
+      call: "selectionSort(arr);",
       passLabel: "Pass",
       swapLabel: "Swaps",
       extraLegend: [

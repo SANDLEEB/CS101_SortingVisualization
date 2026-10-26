@@ -117,7 +117,11 @@ const DEFAULT_SPEED = 1; // "Slow"
 const SortPage = {
   /*
     config = {
-      title, bigIdea (HTML), code (array of Python lines),
+      title, bigIdea (HTML),
+      code: array of C++ lines. A line can also be { text, joinAbove: true }:
+        it lights up together with the line above (for a loop body spread over lines),
+
+      call: the C++ line that runs the sort, e.g. "selectionSort(arr);",
       record(array) -> steps, defaultArray,
       passLabel ("Pass"), swapLabel ("Swaps"),
       extraLegend: [{ symbol, text }],
@@ -152,7 +156,12 @@ const SortPage = {
       `<span class="legend-item"><span class="swatch" style="background:#fff">${l.symbol}</span>${l.text}</span>`
     )).join("");
 
-    const codeHtml = c.code.map((line) => `<li>${escapeHtml(line)}</li>`).join("");
+    const codeHtml = c.code.map((line) => typeof line === "string"
+      ? `<li>${escapeHtml(line)}</li>`
+      : `<li class="${line.joinAbove ? "join-above" : ""}">${escapeHtml(line.text)}</li>`
+    ).join("");
+    const exampleButton = c.defaultArray
+      ? `<button id="b-example" title="Go back to this page's example numbers">↺ Example array</button>` : "";
 
     const panelHtml = c.panels.map((p, i) =>
       `<section class="card panel"><h2>${p.title}</h2><div id="panel-${i}"></div></section>`
@@ -181,6 +190,7 @@ const SortPage = {
           </label>
         </div>
         <div class="custom-input">
+          ${exampleButton}
           <button id="b-random">🎲 New random array</button>
           <input type="text" id="custom" placeholder="e.g. 5,3,8,1" aria-label="Your own numbers">
           <button id="b-custom">Use my numbers</button>
@@ -211,8 +221,12 @@ const SortPage = {
         </div>
 
         <section class="card">
-          <h2>The code (Python)</h2>
+          <h2>The code (C++)</h2>
+          <p class="code-note">The array we are sorting (change it with the buttons above):</p>
+          <pre class="code code-setup" id="code-setup"></pre>
           <ol class="code" id="code">${codeHtml}</ol>
+          <p class="code-note"><code>vector&lt;int&gt;</code> is C++ for "a list of whole numbers".
+          <code>arr.size()</code> means "how many numbers are in arr".</p>
         </section>
       </div>
 
@@ -232,11 +246,23 @@ const SortPage = {
     $("b-back").onclick = () => { this.pause(); this.show(this.current - 1); };
     $("b-forward").onclick = () => { this.pause(); this.show(this.current + 1); };
     $("b-play").onclick = () => (this.timer ? this.pause() : this.play());
+    if (c.defaultArray) {
+      $("b-example").onclick = () => { $("input-error").textContent = ""; this.loadArray(c.defaultArray); };
+    }
     $("b-random").onclick = () => { $("input-error").textContent = ""; this.loadArray(randomArray()); };
     $("b-custom").onclick = () => this.useCustomInput();
     $("custom").onkeydown = (e) => { if (e.key === "Enter") this.useCustomInput(); };
     $("speed").oninput = (e) => { this.speed = Number(e.target.value); this.updateSpeedLabel(); };
     this.updateSpeedLabel();
+
+    // Lines that are just a closing "}" are shown but never highlighted,
+    // so step.codeLine counts only the other lines (1 = first line, 2 = next counted line…).
+    // Each counted line keeps a list of the lines that light up with it.
+    this.codeLineEls = [];
+    document.querySelectorAll("#code li").forEach((li) => {
+      if (li.classList.contains("join-above")) this.codeLineEls[this.codeLineEls.length - 1].push(li);
+      else if (!/^\s*}\s*$/.test(li.textContent)) this.codeLineEls.push([li]);
+    });
 
     // Keyboard shortcuts (not while typing in the text box)
     document.addEventListener("keydown", (e) => {
@@ -294,6 +320,11 @@ const SortPage = {
       `<div class="index-box"><span class="idx-label">index</span><span class="idx-num">${i}</span></div>`
     ).join("");
     document.getElementById("marker-row").style.gridTemplateColumns = cols;
+
+    // Show the array as C++ above the code, and put it in the text box so students can edit it
+    document.getElementById("code-setup").textContent =
+      `vector<int> arr = {${array.join(", ")}};\n${this.config.call}`;
+    document.getElementById("custom").value = array.join(", ");
 
     this.maxValue = Math.max(...array, 1);
     this.show(0);
@@ -358,8 +389,8 @@ const SortPage = {
       markerText.map((t) => `<div class="marker">${t}</div>`).join("");
 
     // Code line
-    document.querySelectorAll("#code li").forEach((li, i) => {
-      li.classList.toggle("current", i + 1 === step.codeLine);
+    this.codeLineEls.forEach((group, i) => {
+      group.forEach((li) => li.classList.toggle("current", i + 1 === step.codeLine));
     });
 
     // Message and counters

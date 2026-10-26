@@ -14,28 +14,46 @@
   <!-- The merge sort itself. It runs once and RECORDS every step. -->
   <script id="algorithm">
     const MERGE_CODE = [
-      "def merge_sort(arr):",
-      "    if len(arr) <= 1:",
-      "        return arr",
-      "    mid = len(arr) // 2",
-      "    left = merge_sort(arr[:mid])",
-      "    right = merge_sort(arr[mid:])",
-      "    return merge(left, right)",
+      "vector<int> mergeSort(vector<int> arr) {",
+      "    if (arr.size() <= 1)",
+      "        return arr;",
+      "    int mid = arr.size() / 2;",
+      "    vector<int> left = mergeSort(firstHalf(arr, mid));",
+      "    vector<int> right = mergeSort(secondHalf(arr, mid));",
+      "    return merge(left, right);",
+      "}",
       "",
-      "def merge(left, right):",
-      "    result = []",
-      "    i = 0",
-      "    j = 0",
-      "    while i < len(left) and j < len(right):",
-      "        if left[i] <= right[j]:",
-      "            result.append(left[i])",
-      "            i += 1",
-      "        else:",
-      "            result.append(right[j])",
-      "            j += 1",
-      "    result.extend(left[i:])",
-      "    result.extend(right[j:])",
-      "    return result",
+      "vector<int> merge(vector<int> left, vector<int> right) {",
+      "    vector<int> result;",
+      "    int i = 0;",
+      "    int j = 0;",
+      "    while (i < left.size() && j < right.size()) {",
+      "        if (left[i] <= right[j]) {",
+      "            result.push_back(left[i]);",
+      "            i++;",
+      "        } else {",
+      "            result.push_back(right[j]);",
+      "            j++;",
+      "        }",
+      "    }",
+      "    while (i < left.size()) {",
+      { text: "        result.push_back(left[i]);", joinAbove: true },
+      { text: "        i++;", joinAbove: true },
+      "    }",
+      "    while (j < right.size()) {",
+      { text: "        result.push_back(right[j]);", joinAbove: true },
+      { text: "        j++;", joinAbove: true },
+      "    }",
+      "    return result;",
+      "}",
+      "",
+      "// Helpers: copy one half of arr into a new list",
+      "vector<int> firstHalf(vector<int> arr, int mid) {",
+      "    return vector<int>(arr.begin(), arr.begin() + mid);",
+      "}",
+      "vector<int> secondHalf(vector<int> arr, int mid) {",
+      "    return vector<int>(arr.begin() + mid, arr.end());",
+      "}",
     ];
 
     function recordMergeSort(array) {
@@ -93,8 +111,8 @@
         save({
           codeLine: 1,
           message: depth === 0
-            ? `merge_sort starts with the whole list ${fmt(piece)}. This is level 0, the top of the tree.`
-            : `merge_sort now works on ${fmt(piece)} (index ${lo} to ${hi}). This is level ${depth} of the tree.`,
+            ? `mergeSort starts with the whole list ${fmt(piece)}. This is level 0, the top of the tree.`
+            : `mergeSort now works on ${fmt(piece)} (index ${lo} to ${hi}). This is level ${depth} of the tree.`,
           highlight: range,
         });
         save({
@@ -124,12 +142,12 @@
         node.right.status = "waiting";
         save({
           codeLine: 4,
-          message: `mid = ${len} // 2 = ${mid}. (// means divide and drop the remainder.) So we split into a left half ${fmt(leftPiece)} and a right half ${fmt(rightPiece)}.`,
+          message: `mid = ${len} / 2 = ${mid}. (When C++ divides two whole numbers, it drops the remainder.) So we split into a left half ${fmt(leftPiece)} and a right half ${fmt(rightPiece)}.`,
           highlight: range,
         });
         save({
           codeLine: 5,
-          message: `First we sort the left half ${fmt(leftPiece)}. merge_sort calls itself on this smaller list.`,
+          message: `First we sort the left half ${fmt(leftPiece)}. mergeSort calls itself on this smaller list.`,
           highlight: { range: [lo, lo + mid - 1] },
         });
 
@@ -171,7 +189,7 @@
         const range = { range: [lo, hi] };
 
         save({ codeLine: 9, message: `merge gets two sorted lists: left ${fmt(L)} and right ${fmt(R)}. You can see them in the merge workspace.`, highlight: range });
-        save({ codeLine: 10, message: `result = [] makes an empty list. We will fill it one number at a time, smallest first.`, highlight: range });
+        save({ codeLine: 10, message: `vector<int> result; makes an empty list called result. We will fill it one number at a time, smallest first.`, highlight: range });
         save({ codeLine: 11, message: `i = 0: the ▲ i arrow points at the first number of the left half, ${L[0]}.`, highlight: range });
         save({ codeLine: 12, message: `j = 0: the ▲ j arrow points at the first number of the right half, ${R[0]}.`, highlight: range });
 
@@ -216,8 +234,8 @@
             save({
               codeLine: 16,
               message: ws.i < L.length
-                ? `i += 1: the ▲ i arrow moves to the next number in the left half, ${L[ws.i]}.`
-                : `i += 1: the ▲ i arrow moves past the end. Every number in the left half has been used.`,
+                ? `i++: the ▲ i arrow moves to the next number in the left half, ${L[ws.i]}.`
+                : `i++: the ▲ i arrow moves past the end. Every number in the left half has been used.`,
               highlight: range,
             });
           } else {
@@ -226,8 +244,8 @@
             save({
               codeLine: 19,
               message: ws.j < R.length
-                ? `j += 1: the ▲ j arrow moves to the next number in the right half, ${R[ws.j]}.`
-                : `j += 1: the ▲ j arrow moves past the end. Every number in the right half has been used.`,
+                ? `j++: the ▲ j arrow moves to the next number in the right half, ${R[ws.j]}.`
+                : `j++: the ▲ j arrow moves past the end. Every number in the right half has been used.`,
               highlight: range,
             });
           }
@@ -354,6 +372,7 @@
       code: MERGE_CODE,
       record: recordMergeSort,
       defaultArray: [38, 27, 43, 3, 9, 82, 10],
+      call: "arr = mergeSort(arr);",
       passLabel: "Level",
       phaseLabel: "Phase",
       swapLabel: "Moves",
